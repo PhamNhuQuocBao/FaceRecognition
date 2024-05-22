@@ -1,4 +1,5 @@
-import React from "react";
+/* eslint-disable @typescript-eslint/no-explicit-any */
+import React, { useEffect, useState } from "react";
 import { Button, DatePicker, Form, FormInstance, Input, Radio } from "antd";
 import UploadFiles from "../Upload";
 import { FormStyled } from "./style";
@@ -7,9 +8,27 @@ interface Props {
   title: string;
   form: FormInstance;
   handleSubmit: () => void;
+  onChangeDate: (date: Date, datestring: string | string[]) => void;
+  employee?: any;
 }
 
-const FormEmployee: React.FC<Props> = ({ title, form, handleSubmit }) => {
+const FormEmployee: React.FC<Props> = ({
+  title,
+  form,
+  handleSubmit,
+  onChangeDate,
+  employee,
+}) => {
+  const [titleButton, setTitleButton] = useState<string>("");
+
+  useEffect(() => {
+    if (employee) {
+      setTitleButton("Cập nhật");
+    } else {
+      setTitleButton("Thêm");
+    }
+  }, [employee]);
+
   return (
     <div>
       <header>
@@ -19,6 +38,7 @@ const FormEmployee: React.FC<Props> = ({ title, form, handleSubmit }) => {
         name="employee"
         layout="vertical"
         form={form}
+        initialValues={employee}
         onFinish={handleSubmit}
       >
         <Form.Item
@@ -47,7 +67,11 @@ const FormEmployee: React.FC<Props> = ({ title, form, handleSubmit }) => {
               },
             ]}
           >
-            <DatePicker className="p-2" />
+            <DatePicker
+              className="p-2"
+              format="DD/MM/YYYY"
+              onChange={onChangeDate}
+            />
           </Form.Item>
 
           <Form.Item
@@ -63,8 +87,8 @@ const FormEmployee: React.FC<Props> = ({ title, form, handleSubmit }) => {
           >
             <Radio.Group>
               <Radio value={1}>Nam</Radio>
-              <Radio value={2}>Nữ</Radio>
-              <Radio value={3}>Khác</Radio>
+              <Radio value={0}>Nữ</Radio>
+              <Radio value={-1}>Khác</Radio>
             </Radio.Group>
           </Form.Item>
         </div>
@@ -84,7 +108,7 @@ const FormEmployee: React.FC<Props> = ({ title, form, handleSubmit }) => {
 
         <Form.Item className="mt-3 mb-0 layout-btn">
           <Button type="primary" htmlType="submit">
-            Submit
+            {titleButton}
           </Button>
         </Form.Item>
       </FormStyled>
