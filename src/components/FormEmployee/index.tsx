@@ -1,33 +1,39 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useEffect, useState } from "react";
 import { Button, DatePicker, Form, FormInstance, Input, Radio } from "antd";
-import UploadFiles from "../Upload";
 import { FormStyled } from "./style";
+import dayjs from "dayjs";
 
 interface Props {
   title: string;
   form: FormInstance;
   handleSubmit: () => void;
-  onChangeDate: (date: Date, datestring: string | string[]) => void;
+  handleUpdate: () => void;
   employee?: any;
+  onChangeImage: (files: FileList) => void;
 }
 
 const FormEmployee: React.FC<Props> = ({
   title,
   form,
   handleSubmit,
-  onChangeDate,
+  handleUpdate,
   employee,
+  onChangeImage,
 }) => {
   const [titleButton, setTitleButton] = useState<string>("");
 
   useEffect(() => {
     if (employee) {
+      form.setFieldsValue({
+        ...employee,
+        birthday: dayjs(employee?.birthday).locale("vi"),
+      });
       setTitleButton("Cập nhật");
     } else {
       setTitleButton("Thêm");
     }
-  }, [employee]);
+  }, [employee, form]);
 
   return (
     <div>
@@ -38,8 +44,7 @@ const FormEmployee: React.FC<Props> = ({
         name="employee"
         layout="vertical"
         form={form}
-        initialValues={employee}
-        onFinish={handleSubmit}
+        onFinish={employee ? handleUpdate : handleSubmit}
       >
         <Form.Item
           label="Họ tên"
@@ -67,11 +72,7 @@ const FormEmployee: React.FC<Props> = ({
               },
             ]}
           >
-            <DatePicker
-              className="p-2"
-              format="DD/MM/YYYY"
-              onChange={onChangeDate}
-            />
+            <DatePicker className="p-2" format="DD/MM/YYYY" />
           </Form.Item>
 
           <Form.Item
@@ -102,8 +103,18 @@ const FormEmployee: React.FC<Props> = ({
           <Input.TextArea placeholder="Địa chỉ" />
         </Form.Item>
 
-        <Form.Item>
-          <UploadFiles />
+        <Form.Item name="images">
+          <input
+            type="file"
+            id="image"
+            multiple
+            max={5}
+            onChange={(e) => {
+              if (e.target.files) {
+                onChangeImage(e.target.files);
+              }
+            }}
+          />
         </Form.Item>
 
         <Form.Item className="mt-3 mb-0 layout-btn">

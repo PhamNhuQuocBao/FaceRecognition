@@ -9,18 +9,20 @@ import {
 } from "@ant-design/icons";
 import FormEmployee from "@/components/FormEmployee";
 import { MESSAGE } from "@/shared/constants/message";
-import { get, push, ref, remove, set } from "firebase/database";
+import { get, push, ref, remove, set, update } from "firebase/database";
 import database from "@/firebase.config";
 import { COLLECTION } from "@/shared/constants/collection";
 import Title from "antd/es/typography/Title";
+import dayjs from "dayjs";
+import { uploadFiles } from "@/services/upload";
 
 const Employee: React.FC = () => {
   const [isOpenModal, setIsOpenModal] = useState<boolean>(false);
   const [isOpenModalConfirm, setIsOpenModalConfirm] = useState<boolean>(false);
-  const [emSelected, setEmSelected] = useState<any>({});
+  const [emSelected, setEmSelected] = useState<any>({ id: "" });
   const [titleForm] = useState<string>("Thêm nhân viên");
-  const [date, setDate] = useState<string | string[]>("");
   const [employees, setEmployees] = useState<any>([]);
+  const [images, setImages] = useState<FileList>();
   const [form] = Form.useForm();
   const columns = useMemo(
     () => [
@@ -33,6 +35,9 @@ const Employee: React.FC = () => {
         title: "Ngày sinh",
         dataIndex: "birthday",
         key: "birthday",
+        render: (_: any, record: any) => (
+          <p>{dayjs(record.birthday).format("DD/MM/YYYY")}</p>
+        ),
       },
       {
         title: "Giới tính",
@@ -40,7 +45,7 @@ const Employee: React.FC = () => {
         key: "gender",
         render: (_: any, record: any) => (
           <p>
-            {record.gender === 1 ? "Nam" : record.gender === 0 ? "Nu" : "Khác"}
+            {record.gender === 1 ? "Nam" : record.gender === 0 ? "Nữ" : "Khác"}
           </p>
         ),
       },
@@ -61,7 +66,6 @@ const Employee: React.FC = () => {
               onClick={() => {
                 setIsOpenModal(true);
                 setEmSelected(record);
-                console.log(record);
               }}
             />
             <DeleteOutlined
@@ -75,24 +79,29 @@ const Employee: React.FC = () => {
     []
   );
 
-  const onChangeDate = useCallback(
-    (date: Date, datestring: string | string[]) => {
-      setDate(String(datestring));
-    },
-    []
-  );
+  const onChangeImage = useCallback((files: FileList) => {
+    setImages(files);
+  }, []);
 
   const handleSubmit = useCallback(async () => {
+    console.log("submit");
+
     try {
       const isValid = await form.validateFields();
       if (!isValid) return;
+      if (!images) return;
+
+      const dataImages = await uploadFiles(images);
 
       const dataForm = {
         name: form.getFieldValue("name"),
         gender: form.getFieldValue("gender"),
-        birthday: date,
+        birthday: dayjs(form.getFieldValue("birthday")).toISOString(),
         address: form.getFieldValue("address"),
+        images: dataImages,
       };
+
+      console.log(dataForm);
 
       const newDoc = push(ref(database, COLLECTION.EMPLOYEE));
       set(newDoc, dataForm)
@@ -110,7 +119,38 @@ const Employee: React.FC = () => {
       message.error(MESSAGE.ERROR.ADD);
       throw error;
     }
-  }, [date, form]);
+  }, [form, images]);
+
+  const handleUpdate = useCallback(async () => {
+    console.log("update");
+
+    try {
+      const isValid = await form.validateFields();
+      if (!isValid) return;
+
+      const dataForm = {
+        name: form.getFieldValue("name"),
+        gender: form.getFieldValue("gender"),
+        birthday: dayjs(form.getFieldValue("birthday")).toISOString(),
+        address: form.getFieldValue("address"),
+      };
+
+      update(ref(database, COLLECTION.EMPLOYEE + `/${emSelected.id}`), dataForm)
+        .then(() => {
+          message.success(MESSAGE.SUCCESS.ADD);
+        })
+        .catch((error) => {
+          message.error(MESSAGE.ERROR.ADD);
+          throw error;
+        });
+
+      setIsOpenModal(false);
+      form.resetFields();
+    } catch (error) {
+      message.error(MESSAGE.ERROR.ADD);
+      throw error;
+    }
+  }, [emSelected.id, form]);
 
   const handleDelete = useCallback(async (id: string) => {
     try {
@@ -137,8 +177,11 @@ const Employee: React.FC = () => {
           id: key,
           ...(value as Record<string, unknown>),
         }));
+
         setEmployees(data);
+        return;
       }
+      setEmployees([]);
     });
   }, []);
 
@@ -157,7 +200,11 @@ const Employee: React.FC = () => {
           <Button
             type="primary"
             icon={<PlusOutlined />}
-            onClick={() => setIsOpenModal(true)}
+            onClick={() => {
+              form.resetFields();
+              setEmSelected({ id: "" });
+              setIsOpenModal(true);
+            }}
           >
             Thêm
           </Button>
@@ -172,20 +219,22 @@ const Employee: React.FC = () => {
         footer={null}
         width={800}
       >
-        {emSelected ? (
+        {emSelected.id ? (
           <FormEmployee
             form={form}
             title={titleForm}
             handleSubmit={handleSubmit}
-            onChangeDate={onChangeDate}
+            handleUpdate={handleUpdate}
             employee={emSelected}
+            onChangeImage={onChangeImage}
           />
         ) : (
           <FormEmployee
             form={form}
             title={titleForm}
             handleSubmit={handleSubmit}
-            onChangeDate={onChangeDate}
+            handleUpdate={handleUpdate}
+            onChangeImage={onChangeImage}
           />
         )}
       </Modal>
